@@ -1,16 +1,14 @@
 import gin
-
 from accelerate import Accelerator
-from data.movie_lens import MovieLensMovieData
-from data.movie_lens import MovieLensSeqData
-from data.utils import cycle
-from data.utils import next_batch
-from modules.model import DecoderRetrievalModel
-from modules.tokenizer.semids import SemanticIdTokenizer
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+
+from data.movie_lens import MovieLensMovieData, MovieLensSeqData
+from data.utils import cycle, next_batch
+from modules.model import DecoderRetrievalModel
+from modules.tokenizer.semids import SemanticIdTokenizer
 
 
 @gin.configurable
@@ -34,12 +32,9 @@ def train(
     vae_n_layers=3,
     attn_heads=16,
     attn_embed_dim=64,
-    attn_layers=6
+    attn_layers=6,
 ):
-    accelerator = Accelerator(
-        split_batches=split_batches,
-        mixed_precision=mixed_precision_type if amp else 'no'
-    )
+    accelerator = Accelerator(split_batches=split_batches, mixed_precision=mixed_precision_type if amp else "no")
 
     device = accelerator.device
 
@@ -54,7 +49,7 @@ def train(
         hidden_dims=[vae_hidden_dim],
         output_dim=vae_embed_dim,
         codebook_size=vae_codebook_size,
-        n_layers=vae_n_layers
+        n_layers=vae_n_layers,
     )
     tokenizer.eval()
     tokenizer.precompute_corpus_ids(movie_dataset)
@@ -65,24 +60,16 @@ def train(
         dropout=True,
         num_heads=attn_heads,
         n_layers=attn_layers,
-        num_embeddings=tokenizer.n_ids
+        num_embeddings=tokenizer.n_ids,
     )
 
-    optimizer = AdamW(
-        params=model.parameters(),
-        lr=learning_rate,
-        weight_decay=weight_decay
-    )
+    optimizer = AdamW(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     scheduler = LinearLR(optimizer)
 
-    model, optimizer, tokenizer, scheduler = accelerator.prepare(
-        model, optimizer, tokenizer, scheduler
-    )
+    model, optimizer, tokenizer, scheduler = accelerator.prepare(model, optimizer, tokenizer, scheduler)
 
-
-    with tqdm(initial=0, total=iterations,
-              disable=not accelerator.is_main_process) as pbar:
+    with tqdm(initial=0, total=iterations, disable=not accelerator.is_main_process) as pbar:
         for iter in range(iterations):
             model.train()
             total_loss = 0
@@ -98,7 +85,7 @@ def train(
 
                 accelerator.backward(loss)
 
-            pbar.set_description(f'loss: {total_loss:.4f}')
+            pbar.set_description(f"loss: {total_loss:.4f}")
 
             accelerator.wait_for_everyone()
             accelerator.clip_grad_norm_(model.parameters(), max_grad_norm)
