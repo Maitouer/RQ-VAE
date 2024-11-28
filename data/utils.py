@@ -13,5 +13,5 @@ def next_batch(dataloader, device):
         user_ids=batch.user_ids.to(device),
         ids=batch.ids.to(device),
         x=batch.x.to(device),
-        seq_mask=batch.seq_mask.to(device)
+        seq_mask=batch.seq_mask.to(device),
     )

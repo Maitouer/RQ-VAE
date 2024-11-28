@@ -1,7 +1,7 @@
+from typing import NamedTuple
+
 import numpy as np
 import torch
-
-from typing import NamedTuple
 
 
 def kmeans_init_(tensor: torch.Tensor, x: torch.Tensor):
@@ -20,10 +20,7 @@ class KmeansOutput(NamedTuple):
 
 
 class Kmeans:
-    def __init__(self,
-                 k: int,
-                 max_iters: int = None,
-                 stop_threshold: float = 1e-2) -> None:
+    def __init__(self, k: int, max_iters: int = None, stop_threshold: float = 1e-2) -> None:
         self.k = k
         self.iters = max_iters
         self.stop_threshold = stop_threshold
@@ -37,11 +34,9 @@ class Kmeans:
         self.assignment = None
 
     def _update_centroids(self, x) -> torch.Tensor:
-        squared_pw_dist = (x.unsqueeze(1) - self.centroids.unsqueeze(0))**2
+        squared_pw_dist = (x.unsqueeze(1) - self.centroids.unsqueeze(0)) ** 2
         centroid_idx = (squared_pw_dist.sum(axis=2)).min(axis=1).indices
-        assigned = (
-            torch.arange(self.k, device=x.device).unsqueeze(1) == centroid_idx
-        )
+        assigned = torch.arange(self.k, device=x.device).unsqueeze(1) == centroid_idx
         for cluster in range(self.k):
             is_assigned_to_c = assigned[cluster]
             if not is_assigned_to_c.any():
@@ -60,7 +55,4 @@ class Kmeans:
                 break
             i += 1
 
-        return KmeansOutput(
-            centroids=self.centroids,
-            assignment=self.assignment
-        )
+        return KmeansOutput(centroids=self.centroids, assignment=self.assignment)

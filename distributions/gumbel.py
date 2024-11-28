@@ -1,6 +1,7 @@
-import torch
-import numpy as np
 from typing import Tuple
+
+import numpy as np
+import torch
 
 
 def sample_gumbel(shape: Tuple, device: torch.device, eps=1e-20) -> torch.Tensor:
@@ -10,18 +11,18 @@ def sample_gumbel(shape: Tuple, device: torch.device, eps=1e-20) -> torch.Tensor
 
 
 def gumbel_softmax_sample(logits: torch.Tensor, temperature: float, device: torch.device) -> torch.Tensor:
-    """ Draw a sample from the Gumbel-Softmax distribution"""
+    """Draw a sample from the Gumbel-Softmax distribution"""
     y = logits + sample_gumbel(logits.shape, device)
     return torch.nn.functional.softmax(y / temperature, dim=-1)
 
 
 class TemperatureScheduler:
     def __init__(
-          self,
-          t0: float,
-          min_t: float,
-          anneal_rate: float,
-          step_size: int,
+        self,
+        t0: float,
+        min_t: float,
+        anneal_rate: float,
+        step_size: int,
     ) -> None:
         self.t0 = t0
         self.min_t = min_t
@@ -30,8 +31,8 @@ class TemperatureScheduler:
         self.t = t0
 
     def update_t(self, iter):
-        if iter % self.step_size == self.step_size-1:
-            self.t = np.maximum(self.t*np.exp(-self.anneal_rate*iter), self.min_t)
+        if iter % self.step_size == self.step_size - 1:
+            self.t = np.maximum(self.t * np.exp(-self.anneal_rate * iter), self.min_t)
 
     def get_t(self, iter):
         self.update_t(iter)

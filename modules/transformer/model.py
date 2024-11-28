@@ -1,21 +1,18 @@
-import torch
-from .attention import MultiHeadSelfAttention
-from .attention import MultiHeadCrossAttention
-from ..normalize import RMSNorm
 from typing import Optional
+
+import torch
 from torch import nn
+
+from ..normalize import RMSNorm
+from .attention import MultiHeadCrossAttention, MultiHeadSelfAttention
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self,
-                 d_in: int,
-                 d_out: int,
-                 dropout: float,
-                 num_heads: int,
-                 qkv_bias: bool,
-                 do_cross_attn: bool = False) -> None:
+    def __init__(
+        self, d_in: int, d_out: int, dropout: float, num_heads: int, qkv_bias: bool, do_cross_attn: bool = False
+    ) -> None:
         super().__init__()
-        
+
         self.d_in = d_in
         self.d_out = d_out
         self.dropout = dropout
@@ -37,8 +34,10 @@ class TransformerBlock(nn.Module):
                 d_in=d_in, d_out=d_out, num_heads=num_heads, dropout=dropout, qkv_bias=qkv_bias
             )
             self.cross_attn_norm = RMSNorm(d_out)
-    
-    def forward(self, x: torch.Tensor, x_kv: Optional[torch.Tensor] = None, attn_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+
+    def forward(
+        self, x: torch.Tensor, x_kv: Optional[torch.Tensor] = None, attn_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         attn_out = self.attn_norm(x + self.attention(x))
         if self.do_cross_attn:
             attn_out = self.cross_attn_norm(attn_out + self.cross_attention(x_q=x, x_kv=x_kv, attn_mask=attn_mask))
@@ -47,25 +46,18 @@ class TransformerBlock(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self,
-                 d_in: int,
-                 d_out: int,
-                 dropout: float,
-                 num_heads: int,
-                 n_layers: int) -> None:
+    def __init__(self, d_in: int, d_out: int, dropout: float, num_heads: int, n_layers: int) -> None:
         super().__init__()
 
-        self.layers = nn.ModuleList([
-            TransformerBlock(
-                d_in=d_in,
-                d_out=d_out,
-                dropout=dropout,
-                num_heads=num_heads,
-                qkv_bias=False,
-                do_cross_attn=False
-            ) for _ in range(n_layers)
-        ])
-    
+        self.layers = nn.ModuleList(
+            [
+                TransformerBlock(
+                    d_in=d_in, d_out=d_out, dropout=dropout, num_heads=num_heads, qkv_bias=False, do_cross_attn=False
+                )
+                for _ in range(n_layers)
+            ]
+        )
+
     def forward(self, x: torch.Tensor, attn_mask: torch.Tensor) -> torch.Tensor:
         for layer in self.layers:
             x = layer(x=x, attn_mask=attn_mask)
@@ -73,29 +65,30 @@ class TransformerEncoder(nn.Module):
 
 
 class TransformerDecoder(nn.Module):
-    def __init__(self,
-                 d_in: int,
-                 d_out: int,
-                 dropout: float,
-                 num_heads: int,
-                 n_layers: int,
-                 do_cross_attn: bool = False) -> None:
+    def __init__(
+        self, d_in: int, d_out: int, dropout: float, num_heads: int, n_layers: int, do_cross_attn: bool = False
+    ) -> None:
         super().__init__()
 
         self.do_cross_attn = do_cross_attn
 
-        self.layers = nn.ModuleList([
-            TransformerBlock(
-                d_in=d_in,
-                d_out=d_out,
-                dropout=dropout,
-                num_heads=num_heads,
-                qkv_bias=False,
-                do_cross_attn=self.do_cross_attn
-            ) for _ in range(n_layers)
-        ])
-    
-    def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None, context: Optional[torch.Tensor] = None) -> torch.Tensor:
+        self.layers = nn.ModuleList(
+            [
+                TransformerBlock(
+                    d_in=d_in,
+                    d_out=d_out,
+                    dropout=dropout,
+                    num_heads=num_heads,
+                    qkv_bias=False,
+                    do_cross_attn=self.do_cross_attn,
+                )
+                for _ in range(n_layers)
+            ]
+        )
+
+    def forward(
+        self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None, context: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         for layer in self.layers:
             x = layer(x, attn_mask, context)
         return x

@@ -1,9 +1,9 @@
+from typing import NamedTuple
+
 import torch
+from torch import nn
 
 from distributions.gumbel import gumbel_softmax_sample
-from typing import NamedTuple
-from typing import Tuple
-from torch import nn
 
 
 class QuantizeOutput(NamedTuple):
@@ -12,11 +12,7 @@ class QuantizeOutput(NamedTuple):
 
 
 class Quantize(nn.Module):
-    def __init__(
-        self,
-        embed_dim: int,
-        n_embed: int
-    ) -> None:
+    def __init__(self, embed_dim: int, n_embed: int) -> None:
         super().__init__()
 
         self.embed_dim = embed_dim
@@ -44,23 +40,14 @@ class Quantize(nn.Module):
         assert x.shape[-1] == self.embed_dim
 
         codebook = self.embedding.weight
-        dist = (
-            (x**2).sum(axis=1, keepdim=True) +
-            (codebook.T**2).sum(axis=0, keepdim=True) -
-            2 * x @ codebook.T
-        )
+        dist = (x**2).sum(axis=1, keepdim=True) + (codebook.T**2).sum(axis=0, keepdim=True) - 2 * x @ codebook.T
 
         _, ids = (-dist).max(axis=1)
 
         if self.training:
-            weights = gumbel_softmax_sample(
-                -dist, temperature=temperature, device=self.device
-            )
+            weights = gumbel_softmax_sample(-dist, temperature=temperature, device=self.device)
             emb = weights @ codebook
         else:
             emb = self.get_item_embeddings(ids)
 
-        return QuantizeOutput(
-            embeddings=emb,
-            ids=ids
-        )
+        return QuantizeOutput(embeddings=emb, ids=ids)
